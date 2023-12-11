@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Screen and Camera Recorder with Stop Button</title>
     <style>
-        #screenRecording,
-        #cameraRecording {
-            display: none;
-        }
+      /* Video elements hidden */
+      #screenRecording,
+      #cameraRecording {
+        display: none;
+      }
     </style>
-</head>
-
-<body>
+  </head>
+  <body>
     {% csrf_token %}
     <h1>Screen and Camera Recorder</h1>
     <video id="screenRecording" controls></video>
@@ -21,168 +20,143 @@
     <button id="stopAndUpload">Durdur ve Gönder</button>
 
     <script>
-        let screenStream, cameraStream;
-        let screenRecorder, cameraRecorder;
-        let screenBlob, cameraBlob;
-
-        const screenRecorderSettings = {
-            video: {
-                displaySurface: "monitor",
-                logicalSurface: true,
-                cursor: "always",
-                frameRate: 60
-            },
-            audio: true
-        };
-        const cameraRecorderSettings = {
-            video: true,
-            audio: false
-        };
-
-        const csrfToken = document.querySelector(
-            "[name=csrfmiddlewaretoken]"
-        ).value;
-
-        window.onload = async() => {
-            const mediaTypeList = ["screen", "camera"];
-
-            const mediaPromises = mediaTypeList.map(async(mediaType) => {
-                const recordingFinishObject = await startRecording(
-                    mediaType
-                );
-
-                let returnObject = {
-                    mediaType
-                };
-
-                if (
-                    recordingFinishObject &&
-                    recordingFinishObject.hasOwnProperty("blob")
-                ) {
-                    mediaType === "screen" ?
-                        (screenBlob = recordingFinishObject.blob) :
-                        (cameraBlob = recordingFinishObject.blob);
-
-                    returnObject.blob = recordingFinishObject.blob;
-                }
-
-                return returnObject;
-            });
-
-            const recordedMedia = await Promise.all(mediaPromises);
-
-            await uploadRecordings();
-        };
-
-        window.onbeforeunload = stopRecording;
-        document
-            .getElementById("stopAndUpload")
-            .addEventListener("click", stopRecording);
-
-        async function startRecording(mediaType) {
-            let streamObject = null;
-
-            try {
-                switch (mediaType) {
-                    case "screen":
-                        streamObject =
-                            await navigator.mediaDevices.getDisplayMedia(
-                                screenRecorderSettings
-                            );
-                        break;
-
-                    case "camera":
-                        streamObject =
-                            await navigator.mediaDevices.getUserMedia(
-                                cameraRecorderSettings
-                            );
-                        break;
-
-                    default:
-                        break;
-                }
-
-                if (mediaType === "screen") {
-                    let {
-                        displaySurface
-                    } = streamObject
-                        .getVideoTracks()[0]
-                        .getSettings();
-
-                    if (displaySurface !== "monitor") {
-                        window.location.reload();
-                    }
-                }
-
-                if (streamObject) {
-                    recorderObject = new MediaRecorder(streamObject);
-
-                    switch (mediaType) {
-                        case "screen":
-                            screenRecorder = recorderObject;
-                            break;
-                        case "camera":
-                            cameraRecorder = recorderObject;
-                            break;
-
-                        default:
-                            break;
-                    }
-
-                    return await handleRecorder(mediaType, recorderObject);
-                }
-            } catch (error) {
-
-                window.location.reload();
-
+      let screenStream, cameraStream
+      let screenRecorder, cameraRecorder
+      let screenBlob, cameraBlob
+      
+      const screenRecorderSettings = {
+        video: {
+          displaySurface: 'monitor',
+          logicalSurface: true,
+          cursor: 'always',
+          frameRate: 60
+        },
+        audio: true
+      }
+      const cameraRecorderSettings = {
+        video: true
+      }
+      
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value
+      
+      window.onload = async () => {
+        const mediaTypeList = ['screen', 'camera']
+      
+        const mediaPromises = mediaTypeList.map(async (mediaType) => {
+          const recordingFinishObject = await startRecording(mediaType)
+      
+          let returnObject = {
+            mediaType
+          }
+      
+          if (recordingFinishObject && recordingFinishObject.hasOwnProperty('blob')) {
+            mediaType === 'screen' ? (screenBlob = recordingFinishObject.blob) : (cameraBlob = recordingFinishObject.blob)
+      
+            returnObject.blob = recordingFinishObject.blob
+          }
+      
+          return returnObject
+        })
+      
+        const recordedMedia = await Promise.all(mediaPromises)
+      
+        await uploadRecordings()
+      }
+      
+      window.onbeforeunload = stopRecording
+      document.getElementById('stopAndUpload').addEventListener('click', stopRecording)
+      
+      async function startRecording(mediaType) {
+        let streamObject = null
+      
+        try {
+          switch (mediaType) {
+            case 'screen':
+              streamObject = await navigator.mediaDevices.getDisplayMedia(screenRecorderSettings)
+              break
+      
+            case 'camera':
+              streamObject = await navigator.mediaDevices.getUserMedia(cameraRecorderSettings)
+              break
+      
+            default:
+              break
+          }
+      
+          if (mediaType === 'screen') {
+            let { displaySurface } = streamObject.getVideoTracks()[0].getSettings()
+      
+            if (displaySurface !== 'monitor') {
+              window.location.reload()
             }
+          }
+      
+          if (streamObject) {
+            recorderObject = new MediaRecorder(streamObject)
+      
+            switch (mediaType) {
+              case 'screen':
+                screenRecorder = recorderObject
+                break
+      
+              case 'camera':
+                cameraRecorder = recorderObject
+                break
+      
+              default:
+                break
+            }
+      
+            return await handleRecorder(mediaType, recorderObject)
+          }
+        } catch (error) {
+          console.error(mediaType, 'Ekran kaydı başlatılırken hata oluştu:', error)
+          window.location.reload()
         }
-
-        function stopRecording() {
-            if (screenRecorder && screenRecorder.state === "recording") {
-                screenRecorder.stop();
-            }
-            if (cameraRecorder && cameraRecorder.state === "recording") {
-                cameraRecorder.stop();
-            }
+      }
+      
+      function stopRecording() {
+        if (screenRecorder && screenRecorder.state === 'recording') {
+          screenRecorder.stop()
         }
-
-        const handleRecorder = (mediaType, recorderObject) => {
-            return new Promise((resolve, reject) => {
-                recorderObject.ondataavailable = (event) => {
-                    resolve({
-                        mediaType,
-                        blob: event.data
-                    });
-                };
-
-                recorderObject.start();
-            });
-        };
-
-        async function uploadRecordings() {
-            const formData = new FormData();
-            if (screenBlob) {
-                formData.append("video", screenBlob);
-            }
-            if (cameraBlob) {
-                formData.append("camera", cameraBlob);
-            }
-
-            try {
-                const response = await fetch(
-                    "api/recordings/", {
-                        method: "POST",
-                        body: formData,
-                        headers: {
-                            "X-CSRFToken": csrfToken
-                        }
-                    }
-                );
-                const data = await response.json();
-            } catch (error) {}
+        if (cameraRecorder && cameraRecorder.state === 'recording') {
+          cameraRecorder.stop()
         }
+      }
+      
+      const handleRecorder = (mediaType, recorderObject) => {
+        return new Promise((resolve, reject) => {
+          recorderObject.ondataavailable = (event) => {
+            resolve({ mediaType, blob: event.data })
+          }
+      
+          recorderObject.start()
+        })
+      }
+      
+      async function uploadRecordings() {
+        const formData = new FormData()
+        if (screenBlob) {
+          formData.append('video', screenBlob)
+        }
+        if (cameraBlob) {
+          formData.append('camera', cameraBlob)
+        }
+      
+        try {
+          const response = await fetch('api/recordings/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'X-CSRFToken': csrfToken
+            }
+          })
+          const data = await response.json()
+          console.log(data)
+        } catch (error) {
+          console.error('Kayıtlar yüklenirken hata oluştu:', error)
+        }
+      }
     </script>
-</body>
-
+  </body>
 </html>
